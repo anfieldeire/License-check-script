@@ -1,8 +1,8 @@
 // This script runs 7 days after the notification script
 
 function user_roles(){
-
 	// Return a unique list of user ids for users who have demand like roles
+
 	var query_string = 'role.name=it_project_user^ORrole.name=it_project_manager^ORrole.name=it_demand_manager^ORrole.name=it_demand_user^user.active=true^user.nameNOTLIKEintegration'; // ^user.sys_id=189c7b9bdbd6030017d83c8f9d96193d^ORuser.sys_id=e2727d8bdb7307c0dd62d7795e961903^ORuser.sys_id=5cd1bd47db7307c0dd62d7795e9619b2^ORuser.sys_id=9f8be05fdb0287805d6cd7795e9619ab^ORuser.sys_id=edb0390bdb3307c0dd62d7795e961963^ORuser.sys_id=ddf0bdcbdb3307c0dd62d7795e9619e5^ORuser.sys_id=e198710c1b0000147edf964abc4bcb3d^ORuser.sys_id=322fc0de1b4b15982e578622dd4bcbe8^ORuser.sys_id=79cf6d4fdbffc3c0dd62d7795e96196b^ORuser.sys_id=06633983dbb307c0dd62d7795e9619b4';
 
 	var userDemand = new GlideRecord('sys_user_has_role'); //lookup users with demand related roles
