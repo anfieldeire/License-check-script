@@ -123,7 +123,6 @@ function app_usage_qualified(Demanduser_arr){
 	var pmo_read_users = [];
 	var pmo_user_no_usage_arr = [];
 	
-
 	for (var i = 0; i < Demanduser_arr.length; i++) { 
 
 		var InsertCount = 0;
@@ -138,7 +137,6 @@ function app_usage_qualified(Demanduser_arr){
 		appUsage.addEncodedQuery("user.u_system_account=false^userISNOTEMPTY^app_name=Demand Management^ORapp_name=Project Management^ORapp_name=Project Portfolio Suite^ORapp_name=Project Portfolio Suite with Financials^ORapp_name=Project Workbench^sys_created_onONLast 3 months@javascript:gs.beginningOfLast3Months()@javascript:gs.endOfLast3Months()");
 		appUsage.query();
 		gs.log('Demand log: App Usage: row count: user:1 ' + Demanduser_arr[i] + appUsage.getRowCount());
-
 
 		while (appUsage.next()) {
 		
@@ -165,9 +163,7 @@ function app_usage_qualified(Demanduser_arr){
 
 			TotalCount = (parseInt(InsertUpdateCount + AccessCount, 10));
 			gs.log('Demand log: App Usage: Total Count: ' + TotalCount + ' user id: ' + Demanduser_arr[i]);
-		
 		}
-
 
 			if (InsertUpdateCount > 0){
 				gs.log('Demand log: App Usage: record found' + '\n' + 'User id: ' + Demanduser_arr[i] +  ', user has inserts or updates in the last 3 months: InsertUpdate: Count: ' + InsertUpdateCount);
@@ -187,7 +183,6 @@ function app_usage_qualified(Demanduser_arr){
 				pmo_user_no_usage_arr.push(Demanduser_arr[i]);
 				}
 
-			
 		//}  // end while
 
 		 if (found == false){
@@ -268,7 +263,7 @@ function notify_users(UserToBeRemovedDetails){
 	
 	var obj_len = Object.keys(UserToBeRemovedDetails).length;
 	
-	var users_to_lose_license = ['32b2d104dbea4300321838ff9d961931','f0f30eb5dba5d38015c889584b96192b','328f61cbdbffc3c0dd62d7795e961988','61afa50fdbffc3c0dd62d7795e961916','95bfa54fdbffc3c0dd62d7795e961901','d2cfad4fdbffc3c0dd62d7795e961932','c8dfe18fdbffc3c0dd62d7795e96194b','03efe9cfdbffc3c0dd62d7795e961968','43efe9cfdbffc3c0dd62d7795e9619e3','cdff6103db3307c0dd62d7795e961942','79a2e9ab1b6cd55073d5315bcd4bcbe9','d02fe7badb5fd380c6d17ffb8c96190e','e200b143db3307c0dd62d7795e9619d6','df4b55eb47b0a5d4e9dd87d8536d43bb','cd203d43db3307c0dd62d7795e9619d4','7f20b583db3307c0dd62d7795e9619ec','4540b5c3db3307c0dd62d7795e96199b','47407dc3db3307c0dd62d7795e961981','0f35e80a1be5ac1074a33377cc4bcb03','32803d87db3307c0dd62d7795e96191c','6fb07d0bdb3307c0dd62d7795e9619f0','2aba87c21b2bd41074a33377cc4bcb0a','2ac0394bdb3307c0dd62d7795e961952','07c0794bdb3307c0dd62d7795e9619a6','a3c0f94bdb3307c0dd62d7795e961998','77b094bedba01344039a777a8c961977','1ad0398bdb3307c0dd62d7795e9619aa','3f5c613edba30300dd62d7795e9619d4','421ed10d1bb765d8ee0743f3cc4bcb9e','7adbcb711b861cd828db866ecc4bcbeb','76c86585db225b00c6d17ffb8c96193a','e3fd3631db2b934053363c8f9d9619b8','c191e4e11beb54103326dd77cc4bcb4b','08617903db7307c0dd62d7795e961902','ebc383971b22b3c8a694dc25cc4bcb05','4e817983db7307c0dd62d7795e961968','7b81fd83db7307c0dd62d7795e96194d','875d23ea1b0ac1502e578622dd4bcb28','71c1b947db7307c0dd62d7795e961964','7dc1b947db7307c0dd62d7795e961978','535c6dfadba30300dd62d7795e9619d4','fbe89ff21b54801428db866ecc4bcb6a','3ea5b31d1baef7087edf964abc4bcb0b','4d0279c7db7307c0dd62d7795e961949','bd02f9c7db7307c0dd62d7795e961920','32023dc7db7307c0dd62d7795e9619b6','9462318bdb7307c0dd62d7795e9619d4','fb8827d41b75e050a694dc25cc4bcb4a','8f82f1cbdb7307c0dd62d7795e9619b4','a5a2310fdb7307c0dd62d7795e96190e','a4c23d0fdb7307c0dd62d7795e961996','3ca60011dbcd3fc41c177bfb8c9619f9','2ac2fd0fdb7307c0dd62d7795e9619d6','911331cfdb7307c0dd62d7795e961923','086c653edba30300dd62d7795e961932','17a3947f1b1e6c50a694dc25cc4bcb3b'];
+	var users_to_lose_license = [];
 	
 	gs.log('Demand Log: send notification to users access to be removed: arr length' + obj_len);
 	
