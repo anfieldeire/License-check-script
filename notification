@@ -2,8 +2,8 @@
 
 function user_roles(){
 
-
 	// Return a unique list of user ids for users who have demand like roles
+
 	var query_string = 'role.name=it_project_user^ORrole.name=it_project_manager^ORrole.name=it_demand_manager^ORrole.name=it_demand_user^user.active=true^user.nameNOTLIKEintegration'; // 
 
 	var userDemand = new GlideRecord('sys_user_has_role'); //lookup users with demand related roles
