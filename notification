@@ -309,6 +309,5 @@ function main(){
 	
 	gs.log('Demand log: main: calling notify users:');
 	notify_users(UserToBeRemovedDetails);
-
 	
 } main();
