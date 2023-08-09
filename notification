@@ -267,19 +267,18 @@ function notify_users(UserToBeRemovedDetails){
 	
 	gs.log('Demand Log: send notification to users access to be removed: arr length' + obj_len);
 	
-	// for (i=0; i < obj_len; i++){
+	for (i=0; i < obj_len; i++){
 		
-	// 	var gr = new GlideRecord('sys_user');
-	// 	gr.addQuery('sys_id', UserToBeRemovedDetails[i].sys_id);
-	// 	gr.query();
+	    var gr = new GlideRecord('sys_user');
+	    gr.addQuery('sys_id', UserToBeRemovedDetails[i].sys_id);
+	    gr.query();
 		
-	// 	if (gr.next()){
+	        if (gr.next()){
 			
-	// 		users_to_lose_license.push(gr.sys_id +"");
+                    users_to_lose_license.push(gr.sys_id +"");
 			
-	// 	}
-			
-	//}	
+	 	}
+	}	
 	gs.log('Demand Log: Notify Users: -users to lose demand license: Count: ' + users_to_lose_license.length + "\n" + users_to_lose_license.toString());
 	gs.eventQueue('pmouser.reminder',current,users_to_lose_license.toString(),'to_lose_all_demand_roles');
 	
