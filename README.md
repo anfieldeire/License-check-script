@@ -1,1 +1,1 @@
-# License-check-script
+# Servicenow Scheduled Job Script
