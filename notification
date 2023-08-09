@@ -1,4 +1,5 @@
 // This script runs 7 days before the script: "Demand User Application Usage - Member Removal"
+// Additional items: email script, event, notification
 
 function user_roles(){
 
