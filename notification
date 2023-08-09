@@ -1,0 +1,319 @@
+// This script runs 7 days before the script: "Demand User Application Usage - Member Removal"
+
+function user_roles(){
+
+
+	// Return a unique list of user ids for users who have demand like roles
+	var query_string = 'role.name=it_project_user^ORrole.name=it_project_manager^ORrole.name=it_demand_manager^ORrole.name=it_demand_user^user.active=true^user.nameNOTLIKEintegration'; // 
+
+	var userDemand = new GlideRecord('sys_user_has_role'); //lookup users with demand related roles
+	userDemand.addEncodedQuery(query_string);
+	userDemand.query();
+	var Demanduser = [];
+
+	while (userDemand.next()) { //loop through and build an array of the above ITIL users
+		
+		tempUser = userDemand.user.user_name.toString();
+		Demanduser.push(tempUser);
+
+	}
+	
+	Demanduser = new ArrayUtil().unique(Demanduser); 
+	gs.log('Demand log: Role Lookup: ' + '\n' + 'Number of users with Roles: it_project_manager/user, it_demand_manager/user: array length: ' + Demanduser.length + '\n' + 'Array contents: ' + Demanduser);
+	
+	return Demanduser;    // array of unique user_names
+}	
+
+function app_usage_dates(Demanduser){
+	// Check app usage for users - and pull timestamps of users that have app usage records
+	
+	var all_users = [];
+
+	for (var i = 0; i < Demanduser.length; i++) { 
+
+		var found = false;
+		
+		var appUsage = new GlideRecord('ua_app_usage');
+		appUsage.addQuery('user.user_name', Demanduser[i]); //see if there is a record on the app usage database view for above user
+		appUsage.addEncodedQuery("user.u_system_account=false^userISNOTEMPTY^app_name=Demand Management^ORapp_name=Project Management^ORapp_name=Project Portfolio Suite^ORapp_name=Project Portfolio Suite with Financials^ORapp_name=Project Workbench^sys_created_onONLast 3 months@javascript:gs.beginningOfLast3Months()@javascript:gs.endOfLast3Months()");
+		appUsage.query();
+		gs.log('Demand log: App Usage: row count: user: ' + Demanduser[i] + appUsage.getRowCount());
+
+		var user_accrualdates = [];
+		
+		var user_dict ={};
+
+		while (appUsage.next()) {
+		
+			found = true;
+
+			gs.log('Demand log: App Usage: after while: user id: '  + Demanduser[i] + 'found: ' + found);
+
+			var time_stamp = appUsage.getValue('time_stamp');
+			//gs.log('Demand log: App Usage: timestamp: ' + time_stamp + ' user id: ' + Demanduser[i]);
+			user_accrualdates.push(time_stamp);
+			//gs.log('Demand log: App Usage: accrual dates: ' + user_accrualdates + ' user id: ' + Demanduser[i]);
+			
+			user_dict ={"user_id": Demanduser[i], "accrual_dates": user_accrualdates};
+			JSUtil.logObject(user_dict, 'Demand Log: App Usage: user dict0');
+		
+		}  // end while
+
+		var userdict_len = Object.keys(user_dict).length;
+		//gs.log('Demand log: App Usage: user dict len: ' + userdict_len);
+
+		if (userdict_len > 0)	{   // for users with no app usage history - do not add to dict
+
+			(all_users.push(user_dict));
+			//JSUtil.logObject(user_dict, 'Demand Log: App Usage: user dict1');
+			//JSUtil.logObject(all_users, 'Demand Log: App Usage: all users2');		
+		}
+	
+		if (found == false){
+
+			gs.log('Demand log: App Usage: No record found' + '\n' + 'User id: ' + Demanduser[i] +  ', user has no insert,update or access in the last 3 months. Add to Users to be Removed array: ' );
+			//UserToBeRemoved.push(Demanduser[i]);
+			//pmo_user_no_usage_arr.push(Demanduser[i]);
+			}
+
+	} // end for
+
+		JSUtil.logObject(all_users, 'Demand Log: App Usage: all users: with app usage');
+	
+	return all_users;
+
+}//app_usage_dates();
+
+function check_usage(all_users){
+
+	// Check the app usage record dates for each user to make sure the user has x months history before including in the array to process
+
+	var user_arr = [];
+
+	var gdt = new GlideDateTime();
+	gdt.addMonths(-3);
+	var months_ago_format = gdt.getDate().getByFormat("yyyy-MM");
+	var months_ago_str = String(months_ago_format);
+
+	var obj_len = Object.keys(all_users).length;
+
+	for (var i=0; i< obj_len; i++){
+
+			var TF = all_users[i].accrual_dates.indexOf(months_ago_str);
+			gs.log('Demand log: check usage: TF:' + TF);
+
+			if (TF !== -1){  // Check to see if the user has app usage history x months ago. If not skip adding to array
+
+				user_arr.push(all_users[i].user_id);	
+
+			}
+	}
+	gs.log('Demand log: check usage: user arr len: ' + user_arr.length + user_arr);			
+
+return user_arr;
+}
+
+function app_usage_qualified(Demanduser_arr){
+	// Check app usage for insert/update/read - for users with qualified history
+	
+	gs.log('Demand log: app usage final user arr: ' + Demanduser_arr);
+
+	var data = [];
+	var UserToBeRemoved = [];
+	var pmo_read_users = [];
+	var pmo_user_no_usage_arr = [];
+	
+
+	for (var i = 0; i < Demanduser_arr.length; i++) { 
+
+		var InsertCount = 0;
+		var UpdateCount = 0;
+		var AccessCount = 0;
+		var InsertUpdateCount = 0;
+
+		var found = false;
+		
+		var appUsage = new GlideRecord('ua_app_usage');
+		appUsage.addQuery('user.user_name', Demanduser_arr[i]); //see if there is a record on the app usage database view for above user
+		appUsage.addEncodedQuery("user.u_system_account=false^userISNOTEMPTY^app_name=Demand Management^ORapp_name=Project Management^ORapp_name=Project Portfolio Suite^ORapp_name=Project Portfolio Suite with Financials^ORapp_name=Project Workbench^sys_created_onONLast 3 months@javascript:gs.beginningOfLast3Months()@javascript:gs.endOfLast3Months()");
+		appUsage.query();
+		gs.log('Demand log: App Usage: row count: user:1 ' + Demanduser_arr[i] + appUsage.getRowCount());
+
+
+		while (appUsage.next()) {
+		
+			found = true;
+
+			tempcount = parseInt(appUsage.insert_count, 10);
+			//gs.log('Demand log: App Usage: Insert Count: tempcount: ' + tempcount + ' user id: ' + Demanduser_arr[i]);
+			
+			InsertCount += tempcount;
+			gs.log('Demand log: App Usage: Insert Count: ' + InsertCount + ' user id: ' + Demanduser_arr[i]);
+
+			tempcount1 = parseInt(appUsage.update_count, 10);
+			//gs.log('Demand log: App Usage: Update Count: tempcount1: ' + tempcount1 + ' user id: ' + Demanduser_arr[i]);
+
+			UpdateCount += tempcount1;
+			gs.log('Demand log: App Usage: Update Count: ' + UpdateCount + ' user id: ' + Demanduser_arr[i]);
+
+			tempcount2 = parseInt(appUsage.access_count, 10);
+			AccessCount += tempcount2;
+			gs.log('Demand log: App Usage: Access Count: ' + AccessCount + ' user id: ' + Demanduser_arr[i]);
+
+			InsertUpdateCount = (parseInt(InsertCount + UpdateCount, 10));
+			gs.log('Demand log: App Usage: InsertUpdate Count: ' + InsertUpdateCount + ' user id: ' + Demanduser_arr[i]);
+
+			TotalCount = (parseInt(InsertUpdateCount + AccessCount, 10));
+			gs.log('Demand log: App Usage: Total Count: ' + TotalCount + ' user id: ' + Demanduser_arr[i]);
+		
+		}
+
+
+			if (InsertUpdateCount > 0){
+				gs.log('Demand log: App Usage: record found' + '\n' + 'User id: ' + Demanduser_arr[i] +  ', user has inserts or updates in the last 3 months: InsertUpdate: Count: ' + InsertUpdateCount);
+				}
+
+			else if (InsertUpdateCount <1 && AccessCount > 0){
+
+				gs.log('Demand log: App Usage: record found' + '\n' + 'User id: ' + Demanduser_arr[i] + ', user has no insert or updates in the last 3 months, but has Access: Count: ' + AccessCount);
+				UserToBeRemoved.push(Demanduser_arr[i]);  
+				pmo_read_users.push(Demanduser_arr[i]);  
+				}
+
+			else if (InsertUpdateCount <1 && AccessCount < 1){
+
+				gs.log('Demand log: App Usage: record found' + '\n' + 'User id: ' + Demanduser_arr[i] +  ', user has no insert,update or access in the last 3 months. Add to Users to be Removed array. Total Count: ' + TotalCount);
+				UserToBeRemoved.push(Demanduser_arr[i]);    
+				pmo_user_no_usage_arr.push(Demanduser_arr[i]);
+				}
+
+			
+		//}  // end while
+
+		 if (found == false){
+
+		 	gs.log('Demand log: App Usage: No record found' + '\n' + 'User id: ' + Demanduser_arr[i] +  ', user has no insert,update or access in the last 3 months. Add to Users to be Removed array: ' );
+		// 	UserToBeRemoved.push(Demanduser_arr[i]);
+		// 	pmo_user_no_usage_arr.push(Demanduser_arr[i]);
+		 	}
+
+
+	} // end for
+
+	data = [UserToBeRemoved, pmo_read_users, pmo_user_no_usage_arr];
+	gs.log('Demand log: print data all: ' + '\n' + 'Array Contents: ' + data);
+	gs.log('Demand log: print data: UserToBeRemoved Count: ' + UserToBeRemoved.length + '\n' + 'Array Contents: ' + UserToBeRemoved);
+	gs.log('Demand log: print data: pmo_read_users Count: ' + pmo_read_users.length + '\n' + 'Array Contents: ' + pmo_read_users);
+	gs.log('Demand log: print data: pmo_user no usage Count: ' + pmo_user_no_usage_arr.length + '\n' + 'Array Contents: ' + pmo_user_no_usage_arr );
+
+	return data;
+}//app_usage_qualified();
+
+
+function user_query(user_ids){
+
+	gs.log('Demand log: User Query: user ids: arr: ' + user_ids);
+	var user_sysids = [];
+
+	for (i=0; i < user_ids.length; i++){
+
+		var gr = new GlideRecord('sys_user');
+		gr.addQuery('user_name', user_ids[i]);
+		gr.query();
+
+		while (gr.next()){
+
+			var user_sysid = gr.getValue('sys_id');
+			user_sysids.push(user_sysid);
+		}
+		
+	}
+	return user_sysids;
+}
+
+
+function user_information(UserToBeRemoved){
+	
+	// Use the user sysid and lookup the user table for additional attributes
+	
+	var UserToBeRemovedDetails = [];
+	var counter = 0;
+	
+	for (i=0; i< UserToBeRemoved.length; i++){
+	
+		var gr = new GlideRecord('sys_user');
+		gr.addQuery('user_name', UserToBeRemoved[i]);
+		gr.query();
+		
+		while (gr.next()){
+			
+			var sys_id = gr.getValue('sys_id');
+			var user = {"user_name": UserToBeRemoved[i], "sys_id": sys_id};
+			
+		}
+		UserToBeRemovedDetails.push(user);
+		counter +=1;
+		//JSUtil.logObject(UserToBeRemovedDetails, 'Demand Log: User Details');
+
+	} 
+	JSUtil.logObject(UserToBeRemovedDetails, 'Demand Log: User Details');
+	
+	return UserToBeRemovedDetails;
+} //user_information();
+
+
+function notify_users(UserToBeRemovedDetails){
+	
+	// Notify users that their access is to be removed in 7 days
+	
+	var obj_len = Object.keys(UserToBeRemovedDetails).length;
+	
+	var users_to_lose_license = ['32b2d104dbea4300321838ff9d961931','f0f30eb5dba5d38015c889584b96192b','328f61cbdbffc3c0dd62d7795e961988','61afa50fdbffc3c0dd62d7795e961916','95bfa54fdbffc3c0dd62d7795e961901','d2cfad4fdbffc3c0dd62d7795e961932','c8dfe18fdbffc3c0dd62d7795e96194b','03efe9cfdbffc3c0dd62d7795e961968','43efe9cfdbffc3c0dd62d7795e9619e3','cdff6103db3307c0dd62d7795e961942','79a2e9ab1b6cd55073d5315bcd4bcbe9','d02fe7badb5fd380c6d17ffb8c96190e','e200b143db3307c0dd62d7795e9619d6','df4b55eb47b0a5d4e9dd87d8536d43bb','cd203d43db3307c0dd62d7795e9619d4','7f20b583db3307c0dd62d7795e9619ec','4540b5c3db3307c0dd62d7795e96199b','47407dc3db3307c0dd62d7795e961981','0f35e80a1be5ac1074a33377cc4bcb03','32803d87db3307c0dd62d7795e96191c','6fb07d0bdb3307c0dd62d7795e9619f0','2aba87c21b2bd41074a33377cc4bcb0a','2ac0394bdb3307c0dd62d7795e961952','07c0794bdb3307c0dd62d7795e9619a6','a3c0f94bdb3307c0dd62d7795e961998','77b094bedba01344039a777a8c961977','1ad0398bdb3307c0dd62d7795e9619aa','3f5c613edba30300dd62d7795e9619d4','421ed10d1bb765d8ee0743f3cc4bcb9e','7adbcb711b861cd828db866ecc4bcbeb','76c86585db225b00c6d17ffb8c96193a','e3fd3631db2b934053363c8f9d9619b8','c191e4e11beb54103326dd77cc4bcb4b','08617903db7307c0dd62d7795e961902','ebc383971b22b3c8a694dc25cc4bcb05','4e817983db7307c0dd62d7795e961968','7b81fd83db7307c0dd62d7795e96194d','875d23ea1b0ac1502e578622dd4bcb28','71c1b947db7307c0dd62d7795e961964','7dc1b947db7307c0dd62d7795e961978','535c6dfadba30300dd62d7795e9619d4','fbe89ff21b54801428db866ecc4bcb6a','3ea5b31d1baef7087edf964abc4bcb0b','4d0279c7db7307c0dd62d7795e961949','bd02f9c7db7307c0dd62d7795e961920','32023dc7db7307c0dd62d7795e9619b6','9462318bdb7307c0dd62d7795e9619d4','fb8827d41b75e050a694dc25cc4bcb4a','8f82f1cbdb7307c0dd62d7795e9619b4','a5a2310fdb7307c0dd62d7795e96190e','a4c23d0fdb7307c0dd62d7795e961996','3ca60011dbcd3fc41c177bfb8c9619f9','2ac2fd0fdb7307c0dd62d7795e9619d6','911331cfdb7307c0dd62d7795e961923','086c653edba30300dd62d7795e961932','17a3947f1b1e6c50a694dc25cc4bcb3b'];
+	
+	gs.log('Demand Log: send notification to users access to be removed: arr length' + obj_len);
+	
+	// for (i=0; i < obj_len; i++){
+		
+	// 	var gr = new GlideRecord('sys_user');
+	// 	gr.addQuery('sys_id', UserToBeRemovedDetails[i].sys_id);
+	// 	gr.query();
+		
+	// 	if (gr.next()){
+			
+	// 		users_to_lose_license.push(gr.sys_id +"");
+			
+	// 	}
+			
+	//}	
+	gs.log('Demand Log: Notify Users: -users to lose demand license: Count: ' + users_to_lose_license.length + "\n" + users_to_lose_license.toString());
+	gs.eventQueue('pmouser.reminder',current,users_to_lose_license.toString(),'to_lose_all_demand_roles');
+	
+	
+}// notify_users();
+
+
+function main(){
+	
+	gs.log('Demand log: main: calling user roles:');
+	var Demanduser = user_roles();
+
+	gs.log('Demand log: main: calling app usage:');
+	var all_users = app_usage_dates(Demanduser);
+
+	gs.log('Demand log: main: calling check usage:');
+	var Demanduser_arr = check_usage(all_users);
+
+	gs.log('Demand log: main: calling app usage qualified:');
+	var data = app_usage_qualified(Demanduser_arr);
+	var UserToBeRemoved = data[0];
+	var user_read_ids = data[1];
+	var user_no_usage_ids = data[2];
+
+	gs.log('Demand log: main: calling user to be removed details:');
+	var UserToBeRemovedDetails = user_information(UserToBeRemoved);  // returns UserToBeRemovedDetails
+	
+	gs.log('Demand log: main: calling notify users:');
+	notify_users(UserToBeRemovedDetails);
+
+	
+} main();
